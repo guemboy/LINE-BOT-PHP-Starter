@@ -1,25 +1,47 @@
 <?php
+$access_token = '94BkkcvLjVdd4fgFBpI8+IXfz2yCJbI4lij8EZojyCl+R92y6ZxqrEAbTtC8Ld9tFVhCAi6fa7YVYWJMSvWRqFaB/xNY2ziWMCk04yWXeLlH3IkNxeqMVe578CuZXmafInpy/+iQcXJCXv2glcvnugdB04t89/1O/w1cDnyilFU=';
 
-// example: https://github.com/onlinetuts/line-bot-api/blob/master/php/example/chapter-01.php
+// Get POST body content
+$content = file_get_contents('php://input');
+// Parse JSON
+$events = json_decode($content, true);
+// Validate parsed JSON data
+if (!is_null($events['events'])) {
+	// Loop through each event
+	foreach ($events['events'] as $event) {
+		// Reply only when message sent is in 'text' format
+		if ($event['type'] == 'message' && $event['message']['type'] == 'text') {
+			// Get text sent
+			$text = $event['message']['text'];
+			// Get replyToken
+			$replyToken = $event['replyToken'];
 
-//include ('line-bot-api/php/line-bot.php');
+			// Build message to reply back
+			$messages = [
+				'type' => 'text',
+				'text' => $text
+			];
 
-$channelSecret = 'e797689c9f1df5a32be4239b79dda174';
-$access_token  = '94BkkcvLjVdd4fgFBpI8+IXfz2yCJbI4lij8EZojyCl+R92y6ZxqrEAbTtC8Ld9tFVhCAi6fa7YVYWJMSvWRqFaB/xNY2ziWMCk04yWXeLlH3IkNxeqMVe578CuZXmafInpy/+iQcXJCXv2glcvnugdB04t89/1O/w1cDnyilFU=';
+			// Make a POST Request to Messaging API to reply to sender
+			$url = 'https://api.line.me/v2/bot/message/reply';
+			$data = [
+				'replyToken' => $replyToken,
+				'messages' => [$messages],
+			];
+			$post = json_encode($data);
+			$headers = array('Content-Type: application/json', 'Authorization: Bearer ' . $access_token);
 
-$bot = new BOT_API($channelSecret, $access_token);
-	
-if (!empty($bot->isEvents)) {
-		
-	$bot->replyMessageNew($bot->replyToken, json_encode($bot->message));
+			$ch = curl_init($url);
+			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+			curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+			$result = curl_exec($ch);
+			curl_close($ch);
 
-	if ($bot->isSuccess()) {
-		echo 'Succeeded!';
-		exit();
+			echo $result . "\r\n";
+		}
 	}
-
-	// Failed
-	echo $bot->response->getHTTPStatus . ' ' . $bot->response->getRawBody(); 
-	exit();
-
 }
+echo "OK";
